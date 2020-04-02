@@ -1,0 +1,8 @@
+main.c:30:5:main	16	static
+main.c:53:6:vTask1_Handler	24	static
+main.c:65:6:vTask2_Handler	24	static
+main.c:93:13:prvSetupHardware	8	static
+main.c:102:6:printmsg	24	static
+main.c:114:6:prvUARTSetup	32	static
+main.c:150:6:prvGPIOSetup	16	static
+main.c:171:6:RTOS_Delay	24	static

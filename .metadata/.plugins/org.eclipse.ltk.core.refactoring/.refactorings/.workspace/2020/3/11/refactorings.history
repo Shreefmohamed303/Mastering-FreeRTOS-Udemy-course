@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Delete resource &apos;STM32_HelloWorld/Third-Party/FreeRTOS/org/Source/portable/GCC/ARM_CM3_MPU&apos;" deleteContents="false" description="Delete resource &apos;STM32_HelloWorld/Third-Party/FreeRTOS/org/Source/portable/GCC/ARM_CM3_MPU&apos;" element1="/STM32_HelloWorld/Third-Party/FreeRTOS/org/Source/portable/GCC/ARM_CM3_MPU" flags="7" id="org.eclipse.ltk.core.refactoring.delete.resources" resources="1" stamp="1584220609882"/>
+</session>

@@ -1,0 +1,304 @@
+ /********************************************************************************
+ *
+ * File Name : main.c
+ *
+ * Description : FreeRTOS Application with Counting Semaphore Tasks
+ *
+ * Author : Shreef Mohamed
+ *
+ * Created on: March 24, 2020
+ *
+ ********************************************************************************/
+/* Includes */
+#include <stddef.h>
+#include "string.h"
+#include "stdio.h"
+#include <stdlib.h>
+#include "stm32f10x.h"
+
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "semphr.h"
+
+/*****************************MACROS****************************/
+#define TRUE 		1
+#define FALSE 		0
+
+/*****************************FUNCTION PPROTOTYPE****************************/
+static void prvSetupHardware();
+static void prvSetupSoftwareInterrupt();
+void prvGPIOSetup(void);
+void prvUARTSetup();
+void printmsg(char *msg);
+void RTOS_Delay(uint32_t delay_in_ms);
+
+//Task Handler Prototype
+static void vHandlerTask( void *pvParameters );
+static void vPeriodicTask( void *pvParameters );
+
+//Call back Function Prototype
+void vApplicationIdleHook(void);
+
+/*****************************Global Variables****************************/
+char usr_msg[200]={0};
+
+// Task Handles
+TaskHandle_t xTaskHandle_Periodic=NULL;
+TaskHandle_t xTaskHandle_ISRHelper=NULL ;
+
+/* Declare a variable of type xSemaphoreHandle.  This is used to reference the
+semaphore that is used to synchronize a task with an interrupt. */
+xSemaphoreHandle xCountingSemaphore;
+
+/* this is the queue which manager uses to put the work ticket id */
+xQueueHandle xWorkQueue;
+
+/*****************************Main Function****************************/
+int main(void)
+{
+	// Initializations
+	NVIC_PriorityGroupConfig( NVIC_PriorityGroup_4 );
+	prvSetupHardware();
+
+
+	printmsg("\r\nThis is Counting Semaphore Project\r\n");
+
+    /* Before a semaphore is used it must be explicitly created.
+     * In this example a counting semaphore is created.
+     * The semaphore is created to have a maximum count value of 10,
+     * and an initial count value of 0. */
+    xCountingSemaphore = xSemaphoreCreateCounting( 10, 0 );
+
+
+    /* Check the semaphore and queue was created successfully. */
+    if( (xCountingSemaphore != NULL) )
+    {
+
+    	/* Enable the button interrupt and set its priority. */
+    	prvSetupSoftwareInterrupt();
+		/* Create the 'handler' task.
+		 * This is the task that will be synchronized with the interrupt.
+		 * The handler task is created with a high priority
+		 * to ensure it runs immediately after the interrupt exits.
+		 * In this case a priority of 3 is chosen. */
+		xTaskCreate( vHandlerTask, "Handler", 300, NULL, 3, NULL );
+
+		/* Create the task that will periodically generate a software interrupt.
+		 * This is created with a priority below the handler task
+		 * to ensure it will get preempted each time the handler task exist the Blocked state.
+		 */
+		xTaskCreate( vPeriodicTask, "Periodic", 300, NULL, 1, NULL );
+
+        /* Start the scheduler so the created tasks start executing. */
+        vTaskStartScheduler();
+    }
+	else
+	{
+	    sprintf(usr_msg,"Semaphore Count project create failed.. \r\n");
+	    printmsg(usr_msg);
+
+	}
+    /* If all is well we will never reach here as the scheduler will now be
+    running the tasks.  If we do reach here then it is likely that there was
+    insufficient heap memory available for a resource to be created. */
+
+	while(1);
+	return 0 ;
+}
+
+
+/***************************** Task Handler Definition****************************/
+static void vHandlerTask( void *pvParameters )
+{
+	/* As per most tasks, this task is implemented within an infinite loop. */
+	while(1)
+	{
+		/* Use the semaphore to wait for the event.
+		 * The semaphore was created before the scheduler was started
+		 * so before this task ran for the first time.
+		 * The task blocks indefinitely meaning this function call ,
+		 *  will only return once the semaphore has been successfully obtained -
+		 *  so there is no need to check the returned value.
+		 */
+		xSemaphoreTake( xCountingSemaphore, portMAX_DELAY );
+
+		/* To get here the event must have occurred.
+		 * Process the event (in this case we just print out a message).
+		 */
+		sprintf(usr_msg, "Handler task - Processing event.\r\n");
+		printmsg(usr_msg);
+	}
+}
+
+static void vPeriodicTask( void *pvParameters )
+{
+	/* As per most tasks, this task is implemented within an infinite loop. */
+	while(1)
+	{
+		/* This task is just used to 'simulate' an interrupt.  This is done by
+		periodically generating a software interrupt. */
+		vTaskDelay( pdMS_TO_TICKS(500) );
+
+		/* Generate the interrupt, printing a message both before hand and
+		afterwards so the sequence of execution is evident from the output. */
+        sprintf(usr_msg, "Periodic task - Pending the interrupt.\r\n" );
+    	printmsg(usr_msg);
+
+        //pend the interrupt
+        NVIC_SetPendingIRQ(EXTI15_10_IRQn);
+
+        sprintf(usr_msg, "Periodic task - Resuming.\r\n" );
+        printmsg(usr_msg);
+
+	}
+}
+/*****************************FUNCTION Definition****************************/
+
+static void prvSetupHardware(void)
+{
+	//Setup GPIO
+	prvGPIOSetup();
+
+	//setup UART_1
+	prvUARTSetup();
+}
+
+void printmsg(char *msg)
+{
+	for(uint32_t i=0 ; i<strlen(msg) ; i++)
+	{
+		//polling to check that the Date Register is Empty
+		while(USART_GetFlagStatus(USART1, USART_FLAG_TXE)!=SET);
+		//put our mesg in the UART Data Register
+		USART_SendData(USART1,msg[i]);
+	}
+
+}
+
+void prvUARTSetup()
+{
+    /* USART configuration structure for USART1 */
+    USART_InitTypeDef usart1_init_struct;
+    /* Bit configuration structure for GPIOA PIN9 and PIN10 */
+    GPIO_InitTypeDef gpioa_init_struct;
+
+    /* Enalbe clock for USART1, AFIO and GPIOA */
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_AFIO |
+                           RCC_APB2Periph_GPIOA, ENABLE);
+
+    /* GPIOA PIN9 alternative function Tx */
+    gpioa_init_struct.GPIO_Pin = GPIO_Pin_9;
+    gpioa_init_struct.GPIO_Speed = GPIO_Speed_50MHz;
+    gpioa_init_struct.GPIO_Mode = GPIO_Mode_AF_PP;
+    GPIO_Init(GPIOA, &gpioa_init_struct);
+
+    /* GPIOA PIN9 alternative function Rx */
+    gpioa_init_struct.GPIO_Pin = GPIO_Pin_10;
+    gpioa_init_struct.GPIO_Speed = GPIO_Speed_50MHz;
+    gpioa_init_struct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(GPIOA, &gpioa_init_struct);
+
+    /* Enable USART1 */
+    USART_Cmd(USART1, ENABLE);
+    /* Baud rate 9600, 8-bit data, One stop bit
+     * No parity, Do both Rx and Tx, No HW flow control
+     */
+    usart1_init_struct.USART_BaudRate = 9600;
+    usart1_init_struct.USART_WordLength = USART_WordLength_8b;
+    usart1_init_struct.USART_StopBits = USART_StopBits_1;
+    usart1_init_struct.USART_Parity = USART_Parity_No ;
+    usart1_init_struct.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+    usart1_init_struct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+    USART_Init(USART1,&usart1_init_struct);
+}
+
+void prvGPIOSetup(void)
+{
+	//Enable The clok for GPIOA , GPIOC
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA,ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC,ENABLE);
+
+	GPIO_InitTypeDef led_init , Button_init ;
+
+	//initialize the LED PC13
+	led_init.GPIO_Mode = GPIO_Mode_Out_PP ;
+	led_init.GPIO_Pin = GPIO_Pin_13 ;
+	led_init.GPIO_Speed = GPIO_Speed_2MHz ;
+	GPIO_Init(GPIOC,&led_init);
+
+	// turn OFF The LED at the First ** LED is Active LOW **
+	GPIO_WriteBit(GPIOC,GPIO_Pin_13,Bit_SET);
+
+	//initialize the Button PA5
+	Button_init.GPIO_Mode = GPIO_Mode_IPD ; // input pull down
+	Button_init.GPIO_Pin = GPIO_Pin_5 ;
+	Button_init.GPIO_Speed = GPIO_Speed_2MHz ;
+	GPIO_Init(GPIOA,&Button_init);
+}
+
+void RTOS_Delay(uint32_t delay_in_ms)
+{
+	// get the Global tick count value which is incremented by systic every 1ms
+	uint32_t current_tick_count = xTaskGetTickCount();
+	//configTICK_RATE_HZ/1000 will give us 1 (1ms)
+	// Multiply 1 * delay_in_ms will get amount of delay in ms
+	uint32_t delay_in_ticks = (delay_in_ms * configTICK_RATE_HZ)/1000 ;
+	while(xTaskGetTickCount() < (current_tick_count + delay_in_ticks)) ;
+}
+
+static void prvSetupSoftwareInterrupt()
+{
+	/* here were simulating the button interrupt by manually setting the interrupt enable bit in the NVIC enable register*/
+
+	/* The interrupt service routine uses an (interrupt safe) FreeRTOS API
+	function so the interrupt priority must be at or below the priority defined
+	by configSYSCALL_INTERRUPT_PRIORITY. */
+
+	NVIC_SetPriority( EXTI9_5_IRQn, 12 );
+
+	/* Enable the interrupt. */
+	NVIC_EnableIRQ( EXTI9_5_IRQn );
+}
+/*****************************Call Back Functions****************************/
+
+void vApplicationIdleHook(void)
+{
+	// send the cpu to the Normal Sleep
+	__WFI();
+}
+
+void EXTI9_5_IRQHandler( void )
+{
+	portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+	/* 'Give' the semaphore multiple times.
+	 * The first will unblock the handler task,
+	 * the following 'gives' are to demonstrate that the semaphore latches the events
+	 * to allow the handler task to process them without any events getting lost.
+	 * This simulates multiple interrupts being taken by the processor,
+	 * even though in this case the events are simulated within a single interrupt occurrence.
+	 */
+	sprintf(usr_msg,"==>Button_Handler\r\n");
+	printmsg(usr_msg);
+
+	xSemaphoreGiveFromISR( xCountingSemaphore, &xHigherPriorityTaskWoken );
+	xSemaphoreGiveFromISR( xCountingSemaphore, &xHigherPriorityTaskWoken );
+	xSemaphoreGiveFromISR( xCountingSemaphore, &xHigherPriorityTaskWoken );
+	xSemaphoreGiveFromISR( xCountingSemaphore, &xHigherPriorityTaskWoken );
+	xSemaphoreGiveFromISR( xCountingSemaphore, &xHigherPriorityTaskWoken );
+
+    /* Clear the software interrupt bit using the interrupt controllers  */
+
+
+    /* Giving the semaphore may have unblocked a task - if it did and the
+    unblocked task has a priority equal to or above the currently executing
+    task then xHigherPriorityTaskWoken will have been set to pdTRUE and
+    portEND_SWITCHING_ISR() will force a context switch to the newly unblocked
+    higher priority task.
+    NOTE: The syntax for forcing a context switch within an ISR varies between
+    FreeRTOS ports.  The portEND_SWITCHING_ISR() macro is provided as part of
+    the Cortex M3 port layer for this purpose.  taskYIELD() must never be called
+    from an ISR! */
+    portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
+}

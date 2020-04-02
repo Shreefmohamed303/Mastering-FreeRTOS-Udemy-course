@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="EXPORT_DIALOG">
+		<item value="0x20003e18" key="Start"/>
+		<item value="0x20004217" key="End"/>
+		<item value="D:\courses\Embedded Systems\Udemy Courses STM32\Mastering RTOS 2020\RTOS TrueStdio WorkSpace\stm32_HelloWorld_v3\Segger_mem_dum\002FreeRTOS_HW.SVdat" key="File"/>
+		<item value="rawbinary" key="SELECTED_EXPORTER"/>
+		<item value="0x20003e18" key="Initial address"/>
+	</section>
+</section>

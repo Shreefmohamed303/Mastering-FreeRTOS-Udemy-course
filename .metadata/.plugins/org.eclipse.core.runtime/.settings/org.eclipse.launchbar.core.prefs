@@ -1,0 +1,16 @@
+LaunchTargetManager/org.eclipse.launchbar.core.launchTargetType.local,Local/arch=x86
+LaunchTargetManager/org.eclipse.launchbar.core.launchTargetType.local,Local/os=win32
+configDescList=org.eclipse.launchbar.core.descriptorType.default\:STM32_HelloWorld Debug,org.eclipse.launchbar.core.descriptorType.default\:Reset,org.eclipse.launchbar.core.descriptorType.default\:Program Chip,org.eclipse.launchbar.core.descriptorType.default\:STM32_FreeRTOS_Semaph_count.elf,org.eclipse.launchbar.core.descriptorType.default\:Erase Chip
+eclipse.preferences.version=1
+org.eclipse.launchbar.core.descriptorType.default\:Erase\ Chip/activeLaunchMode=run
+org.eclipse.launchbar.core.descriptorType.default\:Erase\ Chip/activeLaunchTarget=org.eclipse.launchbar.core.launchTargetType.local\:Local
+org.eclipse.launchbar.core.descriptorType.default\:Program\ Chip/activeLaunchMode=run
+org.eclipse.launchbar.core.descriptorType.default\:Reset/activeLaunchMode=run
+org.eclipse.launchbar.core.descriptorType.default\:Reset/activeLaunchTarget=org.eclipse.launchbar.core.launchTargetType.local\:Local
+org.eclipse.launchbar.core.descriptorType.default\:STM32_FreeRTOS_LED_Button_IT.elf/activeLaunchMode=debug
+org.eclipse.launchbar.core.descriptorType.default\:STM32_FreeRTOS_LED_Button_Notify.elf/activeLaunchMode=debug
+org.eclipse.launchbar.core.descriptorType.default\:STM32_FreeRTOS_Semaph_count.elf/activeLaunchMode=debug
+org.eclipse.launchbar.core.descriptorType.default\:STM32_HelloWorld\ Debug/activeLaunchMode=debug
+org.eclipse.launchbar.core.descriptorType.default\:STM32_HelloWorld.elf/activeLaunchMode=debug
+org.eclipse.launchbar.core.descriptorType.default\:STM32_freeRTOS_LED_Button.elf/activeLaunchMode=debug
+org.eclipse.launchbar.core.descriptorType.default\:stm32_HelloWorld_v3.elf/activeLaunchMode=debug
